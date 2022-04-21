@@ -1,8 +1,64 @@
+const MaxVarintLen64 = 10;
+
 /** Reads a uint24 at offset 0 from the buffer. */
 const getUint24 = (arrayBuffer: ArrayBuffer, le: boolean) => {
 	const buf = new Uint8Array(arrayBuffer);
 	return le ? buf[0] | buf[1] << 8 | buf[2] << 16 : buf[0] << 16 | buf[1] << 8 | buf[2];
 };
+
+// this language is dumb
+// const lshift = (number: number, shift: number): number => {
+// 	return number * Math.pow(2, shift);
+// };
+
+// const getUint40 = (arrayBuffer: ArrayBuffer, le: boolean) => {
+// 	const buf = new Uint8Array(arrayBuffer);
+// 	return le ? buf[0] + lshift(buf[1], 8) + lshift(buf[2], 16) + lshift(buf[3], 24) + lshift(buf[4], 32) :
+// 		lshift(buf[0], 32) + lshift(buf[1], 24) + lshift(buf[2], 16) + lshift(buf[3], 8) + buf[4];
+// };
+
+// const getUint48 = (arrayBuffer: ArrayBuffer, le: boolean) => {
+// 	const buf = new Uint8Array(arrayBuffer);
+// 	return le ? buf[0] + lshift(buf[1], 8) + lshift(buf[2], 16) + lshift(buf[3], 24) + lshift(buf[4], 32) + lshift(buf[5], 40) :
+// 		lshift(buf[0], 40) + lshift(buf[1], 32) + lshift(buf[2], 24) + lshift(buf[3], 16) + lshift(buf[4], 8) + buf[5];
+// };
+
+// const getUint56 = (arrayBuffer: ArrayBuffer, le: boolean) => {
+// 	const buf = new Uint8Array(arrayBuffer);
+// 	return le ? buf[0] + lshift(buf[1], 8) + lshift(buf[2], 16) + lshift(buf[3], 24) + lshift(buf[4], 32) + lshift(buf[5], 40) + lshift(buf[6], 48) :
+// 		lshift(buf[0], 48) + lshift(buf[1], 40) + lshift(buf[2], 32) + lshift(buf[3], 24) + lshift(buf[4], 16) + lshift(buf[5], 8) + buf[6];
+// };
+
+const getUVarInt = (arrayBuffer: ArrayBuffer) => {
+	const buf = new Uint8Array(arrayBuffer);
+	let x = 0;
+	let s = 0;
+	let byteStr = "byte";
+	for (let i = 0; i < MaxVarintLen64; i++) {
+		if (i > 0 && byteStr != "bytes") byteStr = "bytes";
+		const b = buf[i];
+		if (b < 0x80) {
+			if (i == MaxVarintLen64 - 1 && b > 1) {
+				return { value: x, size: i + 1, string: `${x}, (${i + 1} ${byteStr}, overflows)` };
+			}
+			return { value: x | b << s, size: i + 1, string: `${x | b << s} (${i + 1} ${byteStr})` };
+		}
+		x |= (b & 0x7f) << s;
+		s += 7;
+	}
+	return { value: x, size: MaxVarintLen64, string: `${x} (${MaxVarintLen64} ${byteStr})` };
+};
+
+const getVarInt = (arrayBuffer: ArrayBuffer) => {
+	const ux = getUVarInt(arrayBuffer);
+	let x = (ux.value >> 1);
+	if (ux.value & 1) {
+		x = ~x;
+	}
+	const byteStr = ux.size == 1 ? "byte" : "bytes";
+	return { value: x, size: ux.size, string: `${x} (${ux.size} ${byteStr})` };
+};
+
 
 export interface IInspectableType {
 	/** Readable label for the type */
@@ -39,6 +95,9 @@ export const inspectableTypes: readonly IInspectableType[] = [
 
 	{ label: "float32", minBytes: 4, convert: (dv, le) => dv.getFloat32(0, le).toString() },
 	{ label: "float64", minBytes: 8, convert: (dv, le) => dv.getFloat64(0, le).toString() },
+
+	{ label: "varint", minBytes: 1, convert: dv => getVarInt(dv.buffer).string },
+	{ label: "uvarint", minBytes: 1, convert: dv => getUVarInt(dv.buffer).string },
 
 	{
 		label: "UTF-8",

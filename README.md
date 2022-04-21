@@ -3,6 +3,7 @@
 # Installation: (THIS WILL REPLACE THE DEFAULT HEX EDITOR EXTENSION)
 ```sh
 git clone git@github.com:amaanq/vscode-hexeditor-varint.git
+cd vscode-hexeditor-varint
 tsc && node .esbuild.config.js
 vsce package
 code --install-extension hexeditor-1.9.5.vsix
