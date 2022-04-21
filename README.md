@@ -1,3 +1,13 @@
+# This is literally the same extension from Microsoft but it has varints added when inspecting binaries. Varints are a common and popular format to pack ints and decoding them fast can be a pain. This will show a varint value AND number of bytes it takes up. 
+
+# Installation: (THIS WILL REPLACE THE DEFAULT HEX EDITOR EXTENSION)
+```sh
+git clone thisrepo
+tsc && node .esbuild.config.js
+vsce package
+code --install-extension hexeditor-1.9.5.vsix
+```
+
 A custom editor extension for Visual Studio Code which provides a hex editor for viewing and manipulating files in their raw hexadecimal representation.
 
 ## Features
