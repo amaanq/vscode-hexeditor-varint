@@ -8,13 +8,13 @@ import { FromWebviewMessage, InspectorLocation, MessageHandler, MessageType, Rea
 import { deserializeEdits, serializeEdits } from "../../shared/serialization";
 import { clamp, Range } from "./util";
 
-declare function acquireVsCodeApi(): ({
+const acquireVsCodeApi: () => ({
 	postMessage(msg: unknown): void;
 	getState(): any;
 	setState(value: any): void;
-});
+}) = (globalThis as any).acquireVsCodeApi;
 
-export const vscode = acquireVsCodeApi();
+export const vscode = acquireVsCodeApi?.();
 
 const handles: { [T in ToWebviewMessage["type"]]?: (message: ToWebviewMessage) => Promise<FromWebviewMessage> | undefined } = {};
 
@@ -49,7 +49,9 @@ export const dataInspectorLocation = selector({
 		}
 
 		// rough approximation, if there's no enough horizontal width then use a hover instead
-		if (d.rowPxHeight * settings.columnWidth * 2 > d.width) {
+		// rowPxHeight * columnWidth is the width of the 'bytes' display. Double it
+		// for the Decoded Text, if any, plus some sensible padding.
+		if (d.rowPxHeight * settings.columnWidth * (settings.showDecodedText ? 2 : 1) + 100 > d.width) {
 			return InspectorLocation.Hover;
 		}
 
